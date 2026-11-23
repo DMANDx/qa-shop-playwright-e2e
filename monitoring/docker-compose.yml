@@ -26,6 +26,8 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # Разрешаем анонимным Viewer пользоваться Explore (без сохранения изменений)
+      GF_USERS_VIEWERS_CAN_EDIT: "true"
       GF_UNIFIED_ALERTING_ENABLED: "false"
       # Публичный HTTPS-адрес; при смене туннеля обновите этот URL.
       GF_SERVER_ROOT_URL: "https://quiet-pine-9697e003.tunnl.gg"
