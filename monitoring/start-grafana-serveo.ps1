@@ -17,7 +17,7 @@ $TunnelRegex = 'https://[a-z0-9-]+\.serveousercontent\.com'
 
 function Write-Log {
     param([string] $Message)
-    Write-Output ("{0} {1}" -f (Get-Date -Format o), $Message)
+    Write-Host ("{0} {1}" -f (Get-Date -Format o), $Message)
 }
 
 function Get-CurrentUrl {
