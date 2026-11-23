@@ -3,7 +3,7 @@
 E2E-тесты на **C# / NUnit / Playwright** для учебного интернет-магазина «Лавка» (`qa-shop`).
 
 Публичный репозиторий: <https://github.com/DMANDx/qa-shop-playwright-e2e>  
-Публичный адрес магазина: **<https://qa-shop-dmand.loca.lt>**
+Публичный адрес магазина: **<https://qa-shop-dmand-2026.loca.lt>**
 
 Магазин открывается из интернета без VPN. Приложение запущено на ПК как Node.js-процесс
 (`node server.js`, порт 3000 — тот же образ, что описан в `Dockerfile` архива), а публичный адрес
@@ -57,20 +57,20 @@ $env:SHOP_BASE_URL = 'http://localhost:3000'
 dotnet test
 
 # 3b. Прогон против публичного магазина
-$env:SHOP_BASE_URL = 'https://qa-shop-dmand.loca.lt'
+$env:SHOP_BASE_URL = 'https://qa-shop-dmand-2026.loca.lt'
 dotnet test
 ```
 
 Для Windows есть вспомогательный скрипт, который делает restore/build/install/dotnet test:
 
 ```powershell
-.\run-tests.ps1 -BaseUrl 'https://qa-shop-dmand.loca.lt'
+.\run-tests.ps1 -BaseUrl 'https://qa-shop-dmand-2026.loca.lt'
 ```
 
 На Linux/macOS:
 
 ```bash
-SHOP_BASE_URL=https://qa-shop-dmand.loca.lt dotnet test
+SHOP_BASE_URL=https://qa-shop-dmand-2026.loca.lt dotnet test
 ```
 
 ### Переменные окружения
@@ -86,43 +86,6 @@ SHOP_BASE_URL=https://qa-shop-dmand.loca.lt dotnet test
 
 Тесты идут последовательно (`AssemblyInfo.cs` → `[assembly: NonParallelizable]`), потому что сброс
 данных — глобальный для сервера.
-
-## Как поднимался публичный стенд
-
-Исходный архив распакован в `D:\!WORK\Test\qa-shop`. На ПК запущено:
-
-```powershell
-cd D:\!WORK\Test\qa-shop
-npm install
-$env:PORT = '3000'
-$env:ALLOW_TEST_RESET = '1'
-node server.js
-```
-
-Альтернатива из архива (если запущен Docker Desktop):
-
-```powershell
-# в docker-compose.yml раскомментируйте ALLOW_TEST_RESET: "1"
-docker compose up -d --build
-```
-
-Публичный доступ с того же ПК:
-
-```powershell
-npx --yes localtunnel --port 3000 --subdomain qa-shop-dmand
-# => https://qa-shop-dmand.loca.lt
-```
-
-В репозитории лежат watcher-скрипты из каталога `deploy/`:
-
-- `start-shop-watchdog.ps1` — поднимает `node server.js`, если порт 3000 не слушается;
-- `start-tunnel-watchdog.ps1` — перезапускает localtunnel с тем же subdomain'ом, если соединение
-  оборвалось.
-
-Оба скрипта запущены в фоне на текущем ПК, поэтому ссылка остаётся одной и той же.
-
-> `ALLOW_TEST_RESET=1` подходит только для тестового стенда: endpoint `/api/test/reset`
-> доступен без авторизации и очищает все данные. Не включайте его в продакшене.
 
 ## Найденные баги
 
