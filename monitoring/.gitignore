@@ -1,3 +1,4 @@
 grafana-tunnel*.log
 serveo-tunnel*.log
+tunnel*.log
 .grafana-tunnel-url

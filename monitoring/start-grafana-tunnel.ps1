@@ -1,66 +1,165 @@
 param(
-    [int] $Port = 3001,
-    [string] $Subdomain = 'qa-grafana-dmand-nov26'
+    [int] $LocalPort = 3001,
+    [int] $CheckIntervalSeconds = 15,
+    [int] $FailuresBeforeRestart = 2
 )
 
 $ErrorActionPreference = 'Continue'
-$url = "https://$Subdomain.loca.lt/api/health"
-$outLog = Join-Path $PSScriptRoot 'grafana-tunnel.out.log'
-$errLog = Join-Path $PSScriptRoot 'grafana-tunnel.err.log'
 
-function Test-Tunnel {
-    try {
-        $response = Invoke-WebRequest -Uri $url `
-            -Headers @{ 'bypass-tunnel-reminder' = '1' } `
-            -TimeoutSec 20 -UseBasicParsing
-        return $response.StatusCode -eq 200
-    } catch {
-        return $false
-    }
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+$StateFile = Join-Path $PSScriptRoot '.grafana-tunnel-url'
+$OutLog = Join-Path $PSScriptRoot 'tunnel.out.log'
+$ErrLog = Join-Path $PSScriptRoot 'tunnel.err.log'
+$ComposeFile = Join-Path $PSScriptRoot 'docker-compose.yml'
+$ManifestFile = Join-Path $RepoRoot 'docs\tunnel.json'
+$RootHtml = Join-Path $RepoRoot 'docs\index.html'
+$GrafanaHtml = Join-Path $RepoRoot 'docs\grafana\index.html'
+$GitExe = 'D:\Temp\PortableGit\cmd\git.exe'
+$TunnelRegex = 'https://[a-z0-9-]+\.tunnl\.gg'
+
+function Write-Log {
+    param([string] $Message)
+    Write-Host ("{0} {1}" -f (Get-Date -Format o), $Message)
 }
 
-Write-Host "Watching Grafana tunnel https://$Subdomain.loca.lt -> localhost:$Port"
+function Read-LogText {
+    param([string] $Path)
+    if (-not (Test-Path $Path)) { return '' }
+    try {
+        $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+        $reader = [IO.StreamReader]::new($stream, [Text.Encoding]::UTF8)
+        try { return $reader.ReadToEnd() } finally { $reader.Dispose() }
+    } catch { return '' }
+}
+
+function Get-CurrentUrl {
+    if (Test-Path $StateFile) {
+        $url = (Get-Content $StateFile -Raw).Trim()
+        if ($url -match $TunnelRegex) { return $matches[0] }
+    }
+    if (Test-Path $ManifestFile) {
+        $json = Get-Content $ManifestFile -Raw | ConvertFrom-Json
+        if ($json.url -match $TunnelRegex) { return $matches[0] }
+    }
+    return $null
+}
+
+function Test-TunnelUrl {
+    param([string] $Url)
+    if (-not $Url) { return $false }
+    try {
+        $code = & curl.exe -sS -L --max-time 15 -o NUL -w '%{http_code}' "$Url/api/health"
+        return ($code -eq '200')
+    } catch { return $false }
+}
+
+function Start-Tunnel {
+    Get-CimInstance Win32_Process |
+        Where-Object {
+            $_.Name -eq 'ssh.exe' -and
+            $_.CommandLine -like "*localhost:$LocalPort*" -and
+            (
+                $_.CommandLine -like '*proxy.tunnl.gg*' -or
+                $_.CommandLine -like '*serveo.net*' -or
+                $_.CommandLine -like '*pinggy.io*'
+            )
+        } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+    Start-Sleep -Seconds 2
+
+    $arguments = @(
+        '-t',
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'ServerAliveInterval=30',
+        '-o', 'ExitOnForwardFailure=yes',
+        '-R', "80:localhost:$LocalPort",
+        'proxy.tunnl.gg'
+    )
+    $proc = Start-Process -FilePath 'ssh' -ArgumentList $arguments `
+        -RedirectStandardOutput $OutLog -RedirectStandardError $ErrLog `
+        -WindowStyle Hidden -PassThru
+    Write-Log "started tunnl tunnel PID=$($proc.Id)"
+
+    for ($i = 0; $i -lt 12; $i++) {
+        Start-Sleep -Seconds 5
+        $match = [regex]::Match((Read-LogText $OutLog), $TunnelRegex)
+        if ($match.Success) { return $match.Value }
+    }
+    return $null
+}
+
+function Update-PublicUrl {
+    param([string] $NewUrl)
+
+    [IO.File]::WriteAllText($StateFile, $NewUrl, [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($ManifestFile, ('{{"url":"{0}"}}' -f $NewUrl), [Text.UTF8Encoding]::new($false))
+
+    foreach ($htmlPath in @($RootHtml, $GrafanaHtml)) {
+        if (Test-Path $htmlPath) {
+            $html = [IO.File]::ReadAllText($htmlPath)
+            $html = [regex]::Replace($html, 'https://[a-z0-9-]+\.(serveousercontent\.com|tunnl\.gg)', $NewUrl)
+            [IO.File]::WriteAllText($htmlPath, $html, [Text.UTF8Encoding]::new($false))
+        }
+    }
+
+    $compose = [IO.File]::ReadAllText($ComposeFile)
+    $compose = [regex]::Replace($compose, 'GF_SERVER_ROOT_URL: "[^"]+"', ('GF_SERVER_ROOT_URL: "{0}"' -f $NewUrl))
+    [IO.File]::WriteAllText($ComposeFile, $compose, [Text.UTF8Encoding]::new($false))
+
+    Write-Log "updating Grafana root URL to $NewUrl"
+    Push-Location $PSScriptRoot
+    try { & docker compose up -d --force-recreate grafana 2>&1 | Out-Null } finally { Pop-Location }
+
+    for ($i = 0; $i -lt 12; $i++) {
+        Start-Sleep -Seconds 5
+        try {
+            $code = & curl.exe -sS --max-time 8 -o NUL -w '%{http_code}' "http://localhost:$LocalPort/api/health"
+            if ($code -eq '200') { break }
+        } catch {}
+    }
+
+    & $GitExe -C $RepoRoot add docs/tunnel.json docs/index.html docs/grafana/index.html monitoring/docker-compose.yml 2>&1 | Out-Null
+    & $GitExe -C $RepoRoot commit -m "Update Grafana tunnel URL" 2>&1 | Out-Null
+    & $GitExe -C $RepoRoot push origin main 2>&1 | Out-Null
+    Write-Log "published updated redirect to GitHub Pages"
+}
+
+Write-Log "Watching Grafana tunnel -> localhost:$LocalPort"
+
+$currentUrl = Get-CurrentUrl
+if (-not (Test-TunnelUrl $currentUrl)) {
+    Write-Log "current tunnel unavailable, starting a new one"
+    $currentUrl = Start-Tunnel
+    if ($currentUrl) { Update-PublicUrl -NewUrl $currentUrl }
+}
 
 $failures = 0
-$skipUntil = Get-Date
 
 while ($true) {
-    if ((Get-Date) -lt $skipUntil) {
-        Start-Sleep -Seconds 10
+    Start-Sleep -Seconds $CheckIntervalSeconds
+
+    if (Test-TunnelUrl $currentUrl) {
+        if ($failures -gt 0) { Write-Log "tunnel healthy again: $currentUrl" }
+        $failures = 0
         continue
     }
 
-    if (Test-Tunnel) {
-        if ($failures -gt 0) { Write-Host "$(Get-Date -Format o) tunnel healthy again" }
+    $failures++
+    Write-Log "health check failed ($failures/$FailuresBeforeRestart) for $currentUrl"
+    if ($failures -lt $FailuresBeforeRestart) { continue }
+
+    Write-Log "restarting tunnel"
+    $newUrl = Start-Tunnel
+    if (-not $newUrl) {
+        Write-Log "could not obtain a tunnel URL; retrying"
         $failures = 0
-    } else {
-        $failures++
-        Write-Host "$(Get-Date -Format o) health check failed ($failures/3)"
-        if ($failures -ge 3) {
-            Write-Host "$(Get-Date -Format o) restarting $url"
-            Get-CimInstance Win32_Process |
-                Where-Object {
-                    $_.Name -in @('node.exe', 'cmd.exe') -and
-                    $_.CommandLine -like "*--subdomain $Subdomain*"
-                } |
-                ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-
-            Start-Sleep -Seconds 2
-            $proc = Start-Process -FilePath 'cmd.exe' `
-                -ArgumentList @('/c', 'npx', '--yes', 'localtunnel', '--port', "$Port", '--subdomain', $Subdomain) `
-                -RedirectStandardOutput $outLog -RedirectStandardError $errLog `
-                -WindowStyle Hidden -PassThru
-            Write-Host "$(Get-Date -Format o) started localtunnel PID=$($proc.Id)"
-            Start-Sleep -Seconds 25
-
-            $tunnelOutput = Get-Content $outLog -Raw -ErrorAction SilentlyContinue
-            Write-Host "$(Get-Date -Format o) tunnel output: $tunnelOutput"
-            if ($tunnelOutput -notlike "*$Subdomain.loca.lt*") {
-                Write-Host "$(Get-Date -Format o) subdomain temporarily unavailable; retrying in 90s"
-                $skipUntil = (Get-Date).AddSeconds(90)
-            }
-            $failures = 0
-        }
+        continue
     }
-    Start-Sleep -Seconds 15
+
+    if ($newUrl -ne $currentUrl) {
+        Update-PublicUrl -NewUrl $newUrl
+        $currentUrl = $newUrl
+    }
+    $failures = 0
 }
