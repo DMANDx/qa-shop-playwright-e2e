@@ -5,3 +5,6 @@ TestResults/
 *.user
 *.suo
 *.log
+
+start-all.ps1
+stop-all.ps1
