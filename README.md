@@ -89,10 +89,14 @@ SHOP_BASE_URL=https://qa-shop-dmand-2026.loca.lt dotnet test
 
 ## Мониторинг
 
-Grafana доступна публично: **<https://860bb9e5d142afd6-37-212-29-143.serveousercontent.com>**  
-(при первом открытии Serveo покажет предупреждение — нажмите **Continue to Site**).  
-Анонимный доступ с ролью Viewer включён, дашборд открывается сразу. Для изменений можно войти
-как `admin` / `admin`.
+Grafana доступна по постоянной ссылке: **<https://dmandx.github.io/qa-shop-playwright-e2e/>**  
+Она перенаправляет на актуальный HTTPS-туннель. При первом открытии Serveo покажет предупреждение —
+нажмите **Continue to Site**. Анонимный доступ с ролью Viewer включён, дашборд открывается сразу.
+Для изменений можно войти как `admin` / `admin`.
+
+Туннель поддерживается скриптом `monitoring/start-grafana-serveo.ps1`: если Serveo-пересылка
+рвётся, скрипт поднимает новый URL, обновляет `GF_SERVER_ROOT_URL`, страницу-перенаправление
+и публикует изменение в GitHub Pages.
 
 Дашборд **«QA Shop — обзор»** показывает:
 
