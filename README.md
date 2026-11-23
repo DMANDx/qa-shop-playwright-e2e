@@ -87,6 +87,28 @@ SHOP_BASE_URL=https://qa-shop-dmand-2026.loca.lt dotnet test
 Тесты идут последовательно (`AssemblyInfo.cs` → `[assembly: NonParallelizable]`), потому что сброс
 данных — глобальный для сервера.
 
+## Мониторинг
+
+Grafana доступна публично: **<https://860bb9e5d142afd6-37-212-29-143.serveousercontent.com>**  
+(при первом открытии Serveo покажет предупреждение — нажмите **Continue to Site**).  
+Анонимный доступ с ролью Viewer включён, дашборд открывается сразу. Для изменений можно войти
+как `admin` / `admin`.
+
+Дашборд **«QA Shop — обзор»** показывает:
+
+- RPS по маршрутам, долю ошибок 4xx/5xx, latency p95/p99;
+- заказы, выручку, добавления в корзину, регистрации и неудачные логины;
+- активные сессии, товары без остатка, заказы по способу доставки;
+- Node.js runtime: event loop lag, heap/RSS и CPU процесса.
+
+Метрики снимаются Prometheus напрямую с `http://host.docker.internal:3000/metrics` каждые 5 секунд.
+Конфигурация Prometheus, Grafana и дашборд лежат в каталоге `monitoring/`:
+
+```powershell
+cd monitoring
+docker compose up -d
+```
+
 ## Найденные баги
 
 | ID | Severity | Что происходит | Воспроизведение | Ожидалось |
@@ -123,6 +145,7 @@ SHOP_BASE_URL=https://qa-shop-dmand-2026.loca.lt dotnet test
 ├── AuthTests.cs
 ├── KnownBugTests.cs
 ├── deploy/
+├── monitoring/             # Prometheus + Grafana + дашборд
 ├── run-tests.ps1
 └── README.md
 ```
