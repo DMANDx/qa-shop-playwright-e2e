@@ -144,7 +144,6 @@ docker compose up -d
 ├── CheckoutTests.cs
 ├── AuthTests.cs
 ├── KnownBugTests.cs
-├── deploy/
 ├── monitoring/             # Prometheus + Grafana + дашборд
 ├── run-tests.ps1
 └── README.md
