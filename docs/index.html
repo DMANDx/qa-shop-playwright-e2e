@@ -2,45 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="refresh" content="0; url=grafana/">
   <title>QA Shop — Grafana</title>
 </head>
 <body>
-  <p>Открываем дашборд Grafana… <a id="grafana-link" href="#">Открыть вручную</a></p>
-  <noscript>
-    <meta http-equiv="refresh" content="0; url=https://quiet-pine-9697e003.tunnl.gg/d/qa-shop-overview/qa-shop-e28094-obzor">
-  </noscript>
-  <script>
-    (function () {
-      var path = '/d/qa-shop-overview/qa-shop-e28094-obzor?orgId=1&from=now-1h&to=now&timezone=browser&refresh=1m';
-      var fallback = 'https://quiet-pine-9697e003.tunnl.gg';
-      var finished = false;
-
-      function open(base) {
-        var url = String(base || fallback).replace(/\/+$/, '') + path;
-        document.getElementById('grafana-link').href = url;
-        window.location.replace(url);
-      }
-
-      function finish(base) {
-        if (!finished) {
-          finished = true;
-          open(base);
-        }
-      }
-
-      setTimeout(function () { finish(fallback); }, 6000);
-
-      fetch('/qa-shop-playwright-e2e/tunnel.json?ts=' + Date.now(), { cache: 'no-store' })
-        .then(function (response) {
-          if (!response.ok) { throw new Error('manifest unavailable'); }
-          return response.json();
-        })
-        .then(function (manifest) { finish(manifest.url); })
-        .catch(function () { finish(fallback); });
-    })();
-  </script>
+  <p>Открываем дашборд Grafana… <a href="grafana/">Открыть вручную</a></p>
 </body>
 </html>
