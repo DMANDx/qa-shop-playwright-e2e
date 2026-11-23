@@ -28,7 +28,7 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_UNIFIED_ALERTING_ENABLED: "false"
       # Публичный HTTPS-адрес; при смене туннеля обновите этот URL.
-      GF_SERVER_ROOT_URL: "https://fe9151c7b55dc454-37-212-29-143.serveousercontent.com"
+      GF_SERVER_ROOT_URL: "https://62040360c8a4c608-37-212-29-143.serveousercontent.com"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/qa-shop.json
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
