@@ -87,21 +87,6 @@ SHOP_BASE_URL=https://qa-shop-dmand-2026.loca.lt dotnet test
 Тесты идут последовательно (`AssemblyInfo.cs` → `[assembly: NonParallelizable]`), потому что сброс
 данных — глобальный для сервера.
 
-## Подъём и остановка стенда
-
-Всё поднимается и останавливается двумя скриптами из корня репозитория:
-
-```powershell
-# запустить всё: магазин, туннели, Prometheus, Grafana
-powershell -NoProfile -ExecutionPolicy Bypass -File .\start-all.ps1
-
-# остановить всё: watchdog-и гасятся первыми, чтобы ничего не перезапустилось
-powershell -NoProfile -ExecutionPolicy Bypass -File .\stop-all.ps1
-```
-
-`start-all.ps1` идемпотентен — уже работающие watchdog-и не дублируются. Логи пишутся в
-`%TEMP%\qa-shop-watchdogs`. Если нужен только магазин без мониторинга, добавьте `-SkipMonitoring`.
-
 ## Мониторинг
 
 Grafana доступна по постоянной ссылке: **<https://dmandx.github.io/qa-shop-playwright-e2e/grafana/>**  
