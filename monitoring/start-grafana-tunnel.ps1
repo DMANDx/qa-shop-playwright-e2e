@@ -15,7 +15,16 @@ $ManifestFile = Join-Path $RepoRoot 'docs\tunnel.json'
 $RootHtml = Join-Path $RepoRoot 'docs\index.html'
 $GrafanaHtml = Join-Path $RepoRoot 'docs\grafana\index.html'
 $ExploreHtml = Join-Path $RepoRoot 'docs\explore\index.html'
-$GitExe = 'D:\Temp\PortableGit\cmd\git.exe'
+$GitCandidates = @(
+    'D:\Temp\PortableGit\cmd\git.exe',
+    'C:\Program Files\Git\cmd\git.exe',
+    'C:\Program Files (x86)\Git\cmd\git.exe'
+)
+$GitExe = $GitCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $GitExe) {
+    $gitCommand = Get-Command git -ErrorAction SilentlyContinue
+    if ($gitCommand) { $GitExe = $gitCommand.Source }
+}
 $TunnelRegex = 'https://[a-z0-9-]+\.tunnl\.gg'
 
 function Write-Log {
