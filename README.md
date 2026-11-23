@@ -95,6 +95,9 @@ Grafana доступна по постоянной ссылке: **<https://dman
 `tunnl.gg` покажет страницу **Before you continue** — нажмите **Continue to site**. Анонимный доступ
 с ролью Viewer включён, дашборд открывается сразу. Для изменений можно войти как `admin` / `admin`.
 
+Для произвольных PromQL-запросов есть постоянная ссылка на Explore:
+**<https://dmandx.github.io/qa-shop-playwright-e2e/explore/>** (доступна анонимно).
+
 Туннель поддерживается скриптом `monitoring/start-grafana-tunnel.ps1`: если пересылка рвётся,
 скрипт поднимает новый URL, обновляет `GF_SERVER_ROOT_URL`, `tunnel.json` и публикует изменение
 в GitHub Pages.

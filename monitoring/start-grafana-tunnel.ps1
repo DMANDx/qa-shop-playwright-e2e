@@ -14,6 +14,7 @@ $ComposeFile = Join-Path $PSScriptRoot 'docker-compose.yml'
 $ManifestFile = Join-Path $RepoRoot 'docs\tunnel.json'
 $RootHtml = Join-Path $RepoRoot 'docs\index.html'
 $GrafanaHtml = Join-Path $RepoRoot 'docs\grafana\index.html'
+$ExploreHtml = Join-Path $RepoRoot 'docs\explore\index.html'
 $GitExe = 'D:\Temp\PortableGit\cmd\git.exe'
 $TunnelRegex = 'https://[a-z0-9-]+\.tunnl\.gg'
 
@@ -95,7 +96,7 @@ function Update-PublicUrl {
     [IO.File]::WriteAllText($StateFile, $NewUrl, [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText($ManifestFile, ('{{"url":"{0}"}}' -f $NewUrl), [Text.UTF8Encoding]::new($false))
 
-    foreach ($htmlPath in @($RootHtml, $GrafanaHtml)) {
+    foreach ($htmlPath in @($RootHtml, $GrafanaHtml, $ExploreHtml)) {
         if (Test-Path $htmlPath) {
             $html = [IO.File]::ReadAllText($htmlPath)
             $html = [regex]::Replace($html, 'https://[a-z0-9-]+\.(serveousercontent\.com|tunnl\.gg)', $NewUrl)
@@ -119,7 +120,7 @@ function Update-PublicUrl {
         } catch {}
     }
 
-    & $GitExe -C $RepoRoot add docs/tunnel.json docs/index.html docs/grafana/index.html monitoring/docker-compose.yml 2>&1 | Out-Null
+    & $GitExe -C $RepoRoot add docs/tunnel.json docs/index.html docs/grafana/index.html docs/explore/index.html monitoring/docker-compose.yml 2>&1 | Out-Null
     & $GitExe -C $RepoRoot commit -m "Update Grafana tunnel URL" 2>&1 | Out-Null
     & $GitExe -C $RepoRoot push origin main 2>&1 | Out-Null
     Write-Log "published updated redirect to GitHub Pages"
